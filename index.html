@@ -350,12 +350,8 @@ button{font-family:inherit;}
   pointer-events:none;
   opacity:0;
   transition:opacity .5s ease;
-  background:transparent;
 }
-.map-spotlight.show{
-  opacity:1;
-  background: radial-gradient(circle at var(--sx,50%) var(--sy,50%), transparent 0px, transparent 100px, rgba(30,22,16,.65) 180px);
-}
+.map-spotlight.show{ opacity:1; }
 .dot-inner{
   position:absolute;
   width:15px; height:15px;
@@ -365,7 +361,6 @@ button{font-family:inherit;}
   border:1.6px solid rgba(37,27,19,.55);
   box-shadow:0 1px 3px rgba(37,27,19,.4);
   cursor:pointer;
-  will-change:transform;
   transition:box-shadow .15s, border-color .15s, opacity .35s, transform .5s cubic-bezier(.34,1.56,.64,1);
 }
 .dot.pre-enter .dot-inner{
@@ -633,7 +628,7 @@ button{font-family:inherit;}
   .layout{position:relative;}
   .sidebar{
     position:absolute; left:0; right:0; bottom:0;
-    width:auto; height:auto; max-height:82vh; max-height:82dvh;
+    width:auto; height:auto; max-height:68vh; max-height:68dvh;
     border-right:none; border-top:1px solid var(--line);
     border-radius:20px 20px 0 0;
     box-shadow:0 -8px 30px rgba(37,27,19,.22);
@@ -1268,8 +1263,7 @@ function showLocatePin(s){
   void locatePin.offsetWidth;
   locatePin.classList.add('show');
 
-  mapSpotlight.style.setProperty('--sx', s.x_pct+'%');
-  mapSpotlight.style.setProperty('--sy', s.y_pct+'%');
+  mapSpotlight.style.background = `radial-gradient(circle at ${s.x_pct}% ${s.y_pct}%, transparent 0px, transparent 100px, rgba(30,22,16,.65) 180px)`;
   mapSpotlight.classList.add('show');
 }
 function hideLocatePin(){ locatePin.classList.remove('show'); mapSpotlight.classList.remove('show'); }
@@ -1373,7 +1367,7 @@ function fitToScreen(animate){
   const pad = 36;
   const s = Math.min((vw-pad*2)/IMG_W, (vh-pad*2)/IMG_H);
   view.minScale = s*0.85;
-  view.maxScale = s*7;
+  view.maxScale = s*9;
   const targetScale = s;
   const targetX = (vw - IMG_W*targetScale)/2;
   const targetY = (vh - IMG_H*targetScale)/2;
@@ -1407,7 +1401,7 @@ function zoomAt(sx, sy, newScale){
 
 function flyTo(s){
   const vw = viewport.clientWidth, vh = viewport.clientHeight;
-  const targetScale = clamp(view.minScale*3.1, view.minScale, view.maxScale);
+  const targetScale = clamp(view.minScale*4.6, view.minScale, view.maxScale);
   const px = (s.x_pct/100)*IMG_W;
   const py = (s.y_pct/100)*IMG_H;
   const targetX = vw/2 - px*targetScale;
