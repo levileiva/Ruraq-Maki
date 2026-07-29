@@ -154,6 +154,13 @@ button{font-family:inherit;}
   padding:16px 18px 24px;
   padding-bottom:max(24px, env(safe-area-inset-bottom));
 }
+/* When a stand is selected (map tap or search), the filters/list
+   collapse completely and only the search bar stays, so the
+   panel stops eating up screen space. Clicking the search box
+   again brings the list back. */
+.sidebar.list-collapsed .sidebar-scroll{
+  display:none;
+}
 .sidebar-scroll::-webkit-scrollbar{width:9px;}
 .sidebar-scroll::-webkit-scrollbar-thumb{background:var(--line); border-radius:6px;}
 .sidebar-scroll::-webkit-scrollbar-track{background:transparent;}
@@ -1296,6 +1303,7 @@ function selectStand(id, doFly){
 
   if(doFly){ flyTo(s); showLocatePin(s); }
   if(window.innerWidth<=860) closeDrawerInstant();
+  sidebar.classList.add('list-collapsed');
 }
 document.getElementById('detailClose').addEventListener('click', ()=>{
   detailCard.classList.remove('open');
@@ -1303,6 +1311,7 @@ document.getElementById('detailClose').addEventListener('click', ()=>{
   if(state.selectedId!==null && dotEls[state.selectedId]) dotEls[state.selectedId].classList.remove('selected');
   state.selectedId=null;
   document.querySelectorAll('.result-item').forEach(el=>el.classList.remove('selected'));
+  sidebar.classList.remove('list-collapsed');
   if(!sidebar.classList.contains('drawer-open')) setTukiVisible(true);
 });
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') document.getElementById('detailClose').click(); });
@@ -1311,7 +1320,7 @@ document.addEventListener('keydown', e=>{ if(e.key==='Escape') document.getEleme
    MOBILE DRAWER
    ========================================================= */
 const sidebar = document.getElementById('sidebar');
-function openDrawer(){ sidebar.classList.add('drawer-open'); setTukiVisible(false); }
+function openDrawer(){ sidebar.classList.add('drawer-open'); sidebar.classList.remove('list-collapsed'); setTukiVisible(false); }
 function closeDrawer(){ sidebar.classList.remove('drawer-open'); if(!detailCard.classList.contains('open')) setTukiVisible(true); }
 function closeDrawerInstant(){
   searchInput.blur();
@@ -1322,7 +1331,10 @@ function closeDrawerInstant(){
 }
 function toggleDrawer(){ sidebar.classList.contains('drawer-open') ? closeDrawer() : openDrawer(); }
 document.getElementById('drawerHandle').addEventListener('click', toggleDrawer);
-searchInput.addEventListener('focus', ()=>{ if(window.innerWidth<=860) openDrawer(); });
+searchInput.addEventListener('focus', ()=>{
+  sidebar.classList.remove('list-collapsed');
+  if(window.innerWidth<=860) openDrawer();
+});
 
 /* ---------- Tuki, la mascota guía ---------- */
 const tukiWrap = document.getElementById('tukiWrap');
