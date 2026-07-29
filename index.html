@@ -1277,7 +1277,6 @@ function hideLocatePin(){ locatePin.classList.remove('show'); mapSpotlight.class
 function selectStand(id, doFly){
   const s = STANDS.find(x=>x.id===id);
   if(!s) return;
-  if(!doFly) hideLocatePin();
   if(state.selectedId!==null && dotEls[state.selectedId]) dotEls[state.selectedId].classList.remove('selected');
   state.selectedId = id;
   dotEls[id].classList.add('selected');
@@ -1301,19 +1300,37 @@ function selectStand(id, doFly){
   resultEls[id].classList.add('selected');
   resultEls[id].scrollIntoView({block:'nearest'});
 
-  if(doFly){ flyTo(s); showLocatePin(s); }
+  if(doFly) flyTo(s);
+  showLocatePin(s);
   if(window.innerWidth<=860) closeDrawerInstant();
   sidebar.classList.add('list-collapsed');
 }
-document.getElementById('detailClose').addEventListener('click', ()=>{
+
+/* al presionar la "x" del detalle: reinicio completo (búsqueda, filtros,
+   selección, zoom del mapa) y Tuki reaparece preguntando si se busca algo */
+function resetEverything(){
   detailCard.classList.remove('open');
   hideLocatePin();
   if(state.selectedId!==null && dotEls[state.selectedId]) dotEls[state.selectedId].classList.remove('selected');
   state.selectedId=null;
   document.querySelectorAll('.result-item').forEach(el=>el.classList.remove('selected'));
+
+  state.query=''; searchInput.value=''; lastAutoId=null;
+  state.region='ALL'; regionSelect.value='ALL';
+  allCatsOn = true;
+  document.querySelectorAll('.cat-chip').forEach(b=>{b.classList.add('active');});
+  state.activeCats = new Set(CATEGORY_ORDER.map(c=>c.key));
+  document.getElementById('catToggleAll').textContent='Ninguna';
+  render();
+
   sidebar.classList.remove('list-collapsed');
-  if(!sidebar.classList.contains('drawer-open')) setTukiVisible(true);
-});
+  sidebar.classList.remove('drawer-open');
+
+  fitToScreen(true);
+
+  showTuki();
+}
+document.getElementById('detailClose').addEventListener('click', resetEverything);
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') document.getElementById('detailClose').click(); });
 
 /* =========================================================
