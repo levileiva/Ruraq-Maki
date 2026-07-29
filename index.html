@@ -270,6 +270,21 @@ button{font-family:inherit;}
 }
 .results-count strong{color:var(--ink);}
 
+.focus-notice{
+  display:none;
+  align-items:center; justify-content:space-between; gap:8px;
+  background:var(--cochineal-tint);
+  border:1px solid var(--cochineal);
+  border-radius:10px;
+  padding:8px 10px;
+  margin:0 0 10px;
+  font-size:11.5px;
+  color:var(--cochineal-dark);
+  font-weight:600;
+}
+.focus-notice.show{display:flex;}
+.focus-notice .link-btn{color:var(--cochineal-dark); text-decoration:underline; flex:0 0 auto;}
+
 .results-list{
   display:flex; flex-direction:column; gap:6px;
 }
@@ -863,6 +878,10 @@ button{font-family:inherit;}
           <button class="link-btn" id="clearFilters">Limpiar filtros</button>
         </div>
         <p class="results-count"><strong id="resultsCount">210</strong> de 210 expositores</p>
+        <div class="focus-notice" id="focusNotice">
+          <span>Mostrando solo el colectivo seleccionado</span>
+          <button class="link-btn" id="focusExit" type="button">Ver todos</button>
+        </div>
         <div class="results-list" id="resultsList"></div>
       </div>
     </aside>
@@ -1056,6 +1075,7 @@ const state = {
   activeCats: new Set(CATEGORY_ORDER.map(c=>c.key)),
   region: 'ALL',
   selectedId: null,
+  focusMode: false,
 };
 
 function stripAccents(s){
@@ -1089,6 +1109,7 @@ CATEGORY_ORDER.forEach(c=>{
   btn.addEventListener('click', ()=>{
     if(state.activeCats.has(c.key)){ state.activeCats.delete(c.key); btn.classList.remove('active'); }
     else{ state.activeCats.add(c.key); btn.classList.add('active'); }
+    state.focusMode = false;
     render();
   });
   catGrid.appendChild(btn);
@@ -1102,6 +1123,7 @@ document.getElementById('catToggleAll').addEventListener('click', ()=>{
     else{ b.classList.remove('active'); state.activeCats.delete(b.dataset.cat); }
   });
   document.getElementById('catToggleAll').textContent = allCatsOn ? 'Ninguna' : 'Todas';
+  state.focusMode = false;
   render();
 });
 
@@ -1114,7 +1136,7 @@ STANDS.forEach(s=> regionCounts[s.region] = (regionCounts[s.region]||0)+1 );
 const regions = Object.keys(regionCounts).sort((a,b)=>a.localeCompare(b,'es'));
 regionSelect.innerHTML = `<option value="ALL">Todas las regiones (${STANDS.length})</option>` +
   regions.map(r=>`<option value="${r}">${r} (${regionCounts[r]})</option>`).join('');
-regionSelect.addEventListener('change', ()=>{ state.region = regionSelect.value; render(); });
+regionSelect.addEventListener('change', ()=>{ state.region = regionSelect.value; state.focusMode = false; render(); });
 
 /* header stat */
 const peruRegionsCount = regions.filter(r=>!r.startsWith('Ecuador') && r!=='Varios').length;
@@ -1194,16 +1216,26 @@ function render(){
     const ok = matches(s);
     if(ok) visibleCount++;
     dotEls[s.id].classList.toggle('dim', !ok);
-    resultEls[s.id].classList.toggle('hidden', !ok);
+    const listOk = ok && (!state.focusMode || s.id===state.selectedId);
+    resultEls[s.id].classList.toggle('hidden', !listOk);
   });
-  document.getElementById('resultsCount').textContent = visibleCount;
-  document.getElementById('drawerCount').textContent = visibleCount + ' de ' + STANDS.length;
+  const listedCount = state.focusMode ? (state.selectedId!==null ? 1 : 0) : visibleCount;
+  document.getElementById('resultsCount').textContent = listedCount;
+  document.getElementById('drawerCount').textContent = listedCount + ' de ' + STANDS.length;
   emptyState.style.display = visibleCount===0 ? 'block' : 'none';
+  document.getElementById('focusNotice').classList.toggle('show', state.focusMode);
 
   const clearBtn = document.getElementById('searchClear');
   clearBtn.classList.toggle('show', state.query.length>0);
 }
 render();
+
+function exitFocusMode(){
+  if(!state.focusMode) return;
+  state.focusMode = false;
+  render();
+}
+document.getElementById('focusExit').addEventListener('click', exitFocusMode);
 
 /* =========================================================
    SEARCH
@@ -1224,6 +1256,7 @@ function checkAutoLocate(){
 }
 searchInput.addEventListener('input', ()=>{
   state.query = norm(searchInput.value.trim());
+  state.focusMode = false;
   render();
   checkAutoLocate();
 });
@@ -1237,7 +1270,7 @@ searchInput.addEventListener('keydown', e=>{
   }
 });
 document.getElementById('searchClear').addEventListener('click', ()=>{
-  searchInput.value=''; state.query=''; searchInput.focus(); render();
+  searchInput.value=''; state.query=''; state.focusMode = false; searchInput.focus(); render();
 });
 document.getElementById('clearFilters').addEventListener('click', ()=>{
   state.query=''; searchInput.value='';
@@ -1246,6 +1279,7 @@ document.getElementById('clearFilters').addEventListener('click', ()=>{
   document.querySelectorAll('.cat-chip').forEach(b=>{b.classList.add('active');});
   state.activeCats = new Set(CATEGORY_ORDER.map(c=>c.key));
   document.getElementById('catToggleAll').textContent='Ninguna';
+  state.focusMode = false;
   render();
 });
 
@@ -1267,10 +1301,9 @@ function showLocatePin(s){
   mapSpotlight.classList.add('show');
 }
 function hideLocatePin(){ locatePin.classList.remove('show'); mapSpotlight.classList.remove('show'); }
-function selectStand(id, doFly){
+function selectStand(id, doFly, focusList){
   const s = STANDS.find(x=>x.id===id);
   if(!s) return;
-  if(!doFly) hideLocatePin();
   if(state.selectedId!==null && dotEls[state.selectedId]) dotEls[state.selectedId].classList.remove('selected');
   state.selectedId = id;
   dotEls[id].classList.add('selected');
@@ -1290,11 +1323,19 @@ function selectStand(id, doFly){
   detailCard.classList.add('open');
   setTukiVisible(false);
 
+  if(focusList){
+    state.focusMode = true;
+    render();
+  }
+
   document.querySelectorAll('.result-item').forEach(el=>el.classList.remove('selected'));
   resultEls[id].classList.add('selected');
   resultEls[id].scrollIntoView({block:'nearest'});
 
-  if(doFly){ flyTo(s); showLocatePin(s); }
+  /* Efecto tipo Google Maps: acercar al punto y oscurecer el resto */
+  flyTo(s);
+  showLocatePin(s);
+
   if(window.innerWidth<=860) closeDrawerInstant();
 }
 document.getElementById('detailClose').addEventListener('click', ()=>{
@@ -1303,6 +1344,8 @@ document.getElementById('detailClose').addEventListener('click', ()=>{
   if(state.selectedId!==null && dotEls[state.selectedId]) dotEls[state.selectedId].classList.remove('selected');
   state.selectedId=null;
   document.querySelectorAll('.result-item').forEach(el=>el.classList.remove('selected'));
+  state.focusMode = false;
+  render();
   if(!sidebar.classList.contains('drawer-open')) setTukiVisible(true);
 });
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') document.getElementById('detailClose').click(); });
@@ -1498,7 +1541,7 @@ function pointerUp(e){
     if(gestureTarget && gestureMoved<6){
       gestureTarget.parentElement.classList.remove('pressed');
       const id = parseInt(gestureTarget.parentElement.dataset.id,10);
-      selectStand(id, false);
+      selectStand(id, true, true);
     } else if(gestureMoved<6){
       const now = performance.now();
       const tapPos = {x:e.clientX, y:e.clientY};
